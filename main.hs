@@ -11,7 +11,8 @@ import Options.Applicative
 data Options = Options
   { 
     dir :: FilePath,
-    label :: [String]
+    label :: [String],
+    ext :: [String]
   }
 
 optionsParser :: Parser Options
@@ -24,7 +25,12 @@ optionsParser = Options
         ( long "label"
             <> metavar "LABEL"
             <> help "Label to scan for"
- ))
+        ))
+    <*> many (strOption
+    ( long "exts"
+        <> metavar "EXTENSION"
+        <> help "File extension to scan for"
+    ))
 
 main :: IO ()
 main = do
@@ -32,9 +38,10 @@ main = do
     let dirToScan = dir options
     putStrLn $ "Scanning directory: " ++ dirToScan
 
-    let labels = if length (label options) == 0 then getLabels else label options
+    let labels = if length (label options) == 0 then getDefaultLabels else label options
+    let extensions = if length (ext options) == 0 then getDedaultExtensions else ext options
 
-    files <- getRecursiveContents dirToScan
+    files <- getRecursiveContents dirToScan extensions
 
     total <- foldM (\acc file -> do
         count <- checkFile file labels
@@ -61,8 +68,8 @@ main = do
          <> progDesc "Scan directory for TODOs"
          <> header "todo - a simple TODO scanner" )
 
-getRecursiveContents :: FilePath -> IO [FilePath]
-getRecursiveContents topdir = do
+getRecursiveContents :: FilePath -> [String] -> IO [FilePath]
+getRecursiveContents topdir extensions = do
     names <- getDirectoryContents topdir
     let properNames = filter (`notElem` [".", ".."]) names
     paths <- forM properNames $ \name -> do
@@ -70,8 +77,8 @@ getRecursiveContents topdir = do
         isDirectory <- doesDirectoryExist path
 
         if isDirectory
-            then getRecursiveContents path
-            else if isSuffixOf ".php" path || isSuffixOf ".xml" path || isSuffixOf ".yaml" path || isSuffixOf ".yml" path
+            then getRecursiveContents path extensions
+            else if any (`isSuffixOf` path) extensions
                 then return [path]
                 else return []
     return (concat paths)
@@ -96,8 +103,11 @@ checkFile file labels = do
             let count = length fileLinesWithIndexFilteredMappedTrim
             return count
             
-getLabels :: [String]
-getLabels = ["TODO", "FIXME", "XXX"]
+getDefaultLabels :: [String]
+getDefaultLabels = ["TODO", "FIXME", "XXX"]
+
+getDedaultExtensions :: [String]
+getDedaultExtensions = ["php", "js", "xml", "yml", "yaml"]
 
 colorGreen :: String -> String
 colorGreen input = "\x1b[32m" ++ input ++ "\x1b[0m"
