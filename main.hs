@@ -36,7 +36,7 @@ main :: IO ()
 main = do
     options <- execParser opts
     let dirToScan = dir options
-    putStrLn $ "Scanning directory: " ++ dirToScan
+    putStrLn $ colorBlue ("Scanning directory: " ++ dirToScan)
 
     let labels = if length (label options) == 0 then getDefaultLabels else label options
     let extensions = if length (ext options) == 0 then getDedaultExtensions else ext options
@@ -70,18 +70,25 @@ main = do
 
 getRecursiveContents :: FilePath -> [String] -> IO [FilePath]
 getRecursiveContents topdir extensions = do
-    names <- getDirectoryContents topdir
-    let properNames = filter (`notElem` [".", ".."]) names
-    paths <- forM properNames $ \name -> do
-        let path = topdir </> name
-        isDirectory <- doesDirectoryExist path
+    -- is directory exist
+    isDirectoryExist <- doesDirectoryExist topdir
+    if not isDirectoryExist
+        then do 
+            putStrLn $ colorRed ("Directory " ++ topdir ++ " does not exist")
+            return []
+        else do
+            names <- getDirectoryContents topdir
+            let properNames = filter (`notElem` [".", ".."]) names
+            paths <- forM properNames $ \name -> do
+                let path = topdir </> name
+                isDirectory <- doesDirectoryExist path
 
-        if isDirectory
-            then getRecursiveContents path extensions
-            else if any (`isSuffixOf` path) extensions
-                then return [path]
-                else return []
-    return (concat paths)
+                if isDirectory
+                    then getRecursiveContents path extensions
+                    else if any (`isSuffixOf` path) extensions
+                        then return [path]
+                        else return []
+            return (concat paths)
     
 checkFile :: FilePath -> [String] -> IO Int
 checkFile file labels = do
@@ -120,6 +127,12 @@ textWithBackground color input = "\x1b[" ++ color ++ "m" ++ input ++ "\x1b[0m"
 
 textWithRedBackroundAndBorder :: String -> String
 textWithRedBackroundAndBorder input = textWithBackground "41;1;37" input
+
+colorBlue :: String -> String
+colorBlue input = "\x1b[34m" ++ input ++ "\x1b[0m"
+
+textWithBlueBackground :: String -> String
+textWithBlueBackground input = textWithBackground "44;1;37" input
 
 textWithRedBackground :: String -> String
 textWithRedBackground input = textWithBackground "41;1;37" (" " ++ input ++ " ")
