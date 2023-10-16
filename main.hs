@@ -7,6 +7,7 @@ import System.Environment
 import System.Exit
 import Data.Char
 import Options.Applicative
+import Data.Binary.Put (PutM(Put))
 
 data Options = Options
   { 
@@ -38,8 +39,8 @@ main = do
     let dirToScan = dir options
     putStrLn $ colorBlue ("Scanning directory: " ++ dirToScan)
 
-    let labels = if length (label options) == 0 then getDefaultLabels else label options
-    let extensions = if length (ext options) == 0 then getDedaultExtensions else ext options
+    let labels = if null (label options) then getDefaultLabels else label options
+    let extensions = if null (ext options) then getDedaultExtensions else ext options
 
     files <- getRecursiveContents dirToScan extensions
 
@@ -48,7 +49,7 @@ main = do
         return (acc + count)) 0 files
 
     let msg = "Found " ++ show total ++ " TODOs"
-    let lengthSpaces = (length msg) + 2
+    let lengthSpaces = length msg + 2
 
     if total == 0 then do
         putStrLn $ spacesWithGreenBackground lengthSpaces
@@ -92,20 +93,21 @@ getRecursiveContents topdir extensions = do
     
 checkFile :: FilePath -> [String] -> IO Int
 checkFile file labels = do
-    content <- readFile $ file
+    content <- readFile file
     let linesOfFile = lines content
     let fileLinesWithIndex = zip [1..] linesOfFile
     let fileLinesWithIndexFiltered = filter (\(i, line) -> any (`isInfixOf` line) labels) fileLinesWithIndex
     let fileLinesWithIndexFilteredMapped = map (\(i, line) -> (i, removeBeforeLabels line labels)) fileLinesWithIndexFiltered
     let fileLinesWithIndexFilteredMappedTrim = map (\(i, line) -> (i, dropWhile isSpace line)) fileLinesWithIndexFilteredMapped
     
-    if length fileLinesWithIndexFilteredMappedTrim == 0
+    if null fileLinesWithIndexFilteredMappedTrim
         then return 0
         else do
             putStrLn "------ --------------------------------------------------"    
             let msg = "Line: " ++ file
             putStrLn $ colorGreen msg
-            mapM_ putStrLn $ map (\(i, line) -> show i ++ "     " ++ line) fileLinesWithIndexFilteredMappedTrim
+            mapM_ (putStrLn . (\(i, line) -> show i ++ "     " ++ line)) fileLinesWithIndexFilteredMappedTrim
+            --mapM_ putStrLn $ map (\(i, line) -> show i ++ "     " ++ line) fileLinesWithIndexFilteredMappedTrim
             putStrLn "------ --------------------------------------------------"
             let count = length fileLinesWithIndexFilteredMappedTrim
             return count
