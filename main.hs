@@ -76,7 +76,7 @@ getRecursiveContents topdir extensions = do
     if not isDirectoryExist
         then do 
             putStrLn $ colorRed ("Directory " ++ topdir ++ " does not exist")
-            return []
+            exitFailure
         else do
             names <- getDirectoryContents topdir
             let properNames = filter (`notElem` [".", ".."]) names
@@ -107,7 +107,6 @@ checkFile file labels = do
             let msg = "Line: " ++ file
             putStrLn $ colorGreen msg
             mapM_ (putStrLn . (\(i, line) -> show i ++ "     " ++ line)) fileLinesWithIndexFilteredMappedTrim
-            --mapM_ putStrLn $ map (\(i, line) -> show i ++ "     " ++ line) fileLinesWithIndexFilteredMappedTrim
             putStrLn "------ --------------------------------------------------"
             let count = length fileLinesWithIndexFilteredMappedTrim
             return count
