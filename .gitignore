@@ -1,6 +1,6 @@
 *.hi
 *.o
 logs_parser
-./vscode/*
+.vscode/*
 main
 /build/*
