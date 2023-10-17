@@ -71,7 +71,6 @@ main = do
 
 getRecursiveContents :: FilePath -> [String] -> IO [FilePath]
 getRecursiveContents topdir extensions = do
-    -- is directory exist
     isDirectoryExist <- doesDirectoryExist topdir
     if not isDirectoryExist
         then do 

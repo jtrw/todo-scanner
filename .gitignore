@@ -4,3 +4,4 @@ logs_parser
 .vscode/*
 main
 /build/*
+dist-newstyle/*
