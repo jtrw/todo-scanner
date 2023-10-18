@@ -2,26 +2,27 @@ import Data.List
 import System.Directory
 import System.FilePath
 import Control.Monad
-import System.IO
-import System.Environment
+--import System.IO
+--import System.Environment
 import System.Exit
 import Data.Char
 import Options.Applicative
-import Data.Binary.Put (PutM(Put))
+import Data.Bifunctor (second)
+--import Data.Binary.Put (PutM(Put))
 
 data Options = Options
-  { 
-    dir :: FilePath,
+  {
+    dir :: [FilePath],
     label :: [String],
     ext :: [String]
   }
 
 optionsParser :: Parser Options
 optionsParser = Options
-    <$> strOption
+    <$> many (strOption
         ( long "dir"
         <> metavar "DIRECTORY"
-        <> help "Directory to scan" )
+        <> help "Directory to scan" ))
     <*> many (strOption
         ( long "label"
             <> metavar "LABEL"
@@ -36,13 +37,24 @@ optionsParser = Options
 main :: IO ()
 main = do
     options <- execParser opts
-    let dirToScan = dir options
-    putStrLn $ colorBlue ("Scanning directory: " ++ dirToScan)
+
+    let  dirsToScan = dir options
+
+    if null dirsToScan
+        then do
+            putStrLn $ colorRed "No directory to scan. Use --dir option"
+            exitFailure
+        else do
+            return ()
+
+    mapM_ (putStrLn . (\ currentDir -> colorBlue ("Scanning directory: " ++ currentDir))) dirsToScan
 
     let labels = if null (label options) then getDefaultLabels else label options
     let extensions = if null (ext options) then getDedaultExtensions else ext options
 
-    files <- getRecursiveContents dirToScan extensions
+    files <- foldM (\acc currentDir -> do
+        files <- getRecursiveContents currentDir extensions
+        return (acc ++ files)) [] dirsToScan
 
     total <- foldM (\acc file -> do
         count <- checkFile file labels
@@ -51,7 +63,7 @@ main = do
     let msg = "Found " ++ show total ++ " TODOs"
     let lengthSpaces = length msg + 2
 
-    if total == 0 then do
+    _ <- if total == 0 then do
         putStrLn $ spacesWithGreenBackground lengthSpaces
         putStrLn $ textWithGreenBackground msg
         putStrLn $ spacesWithGreenBackground lengthSpaces
@@ -61,7 +73,6 @@ main = do
         putStrLn $ textWithRedBackground msg
         putStrLn $ spacesWithRedBackground lengthSpaces
         exitFailure
-    
     exitSuccess
     where
         opts = info (helper <*> optionsParser)
@@ -73,7 +84,7 @@ getRecursiveContents :: FilePath -> [String] -> IO [FilePath]
 getRecursiveContents topdir extensions = do
     isDirectoryExist <- doesDirectoryExist topdir
     if not isDirectoryExist
-        then do 
+        then do
             putStrLn $ colorRed ("Directory " ++ topdir ++ " does not exist")
             exitFailure
         else do
@@ -89,27 +100,27 @@ getRecursiveContents topdir extensions = do
                         then return [path]
                         else return []
             return (concat paths)
-    
+
 checkFile :: FilePath -> [String] -> IO Int
 checkFile file labels = do
     content <- readFile file
     let linesOfFile = lines content
     let fileLinesWithIndex = zip [1..] linesOfFile
-    let fileLinesWithIndexFiltered = filter (\(i, line) -> any (`isInfixOf` line) labels) fileLinesWithIndex
+    let fileLinesWithIndexFiltered = filter (\(_, line) -> any (`isInfixOf` line) labels) fileLinesWithIndex
     let fileLinesWithIndexFilteredMapped = map (\(i, line) -> (i, removeBeforeLabels line labels)) fileLinesWithIndexFiltered
-    let fileLinesWithIndexFilteredMappedTrim = map (\(i, line) -> (i, dropWhile isSpace line)) fileLinesWithIndexFilteredMapped
-    
+    let fileLinesWithIndexFilteredMappedTrim = map (Data.Bifunctor.second (dropWhile isSpace)) fileLinesWithIndexFilteredMapped
+
     if null fileLinesWithIndexFilteredMappedTrim
         then return 0
         else do
-            putStrLn "------ --------------------------------------------------"    
+            putStrLn "------ --------------------------------------------------"
             let msg = "Line: " ++ file
             putStrLn $ colorGreen msg
-            mapM_ (putStrLn . (\(i, line) -> show i ++ "     " ++ line)) fileLinesWithIndexFilteredMappedTrim
+            mapM_ (putStrLn . (\(i, line) -> show (i :: Integer) ++ "     " ++ line)) fileLinesWithIndexFilteredMappedTrim
             putStrLn "------ --------------------------------------------------"
             let count = length fileLinesWithIndexFilteredMappedTrim
             return count
-            
+
 getDefaultLabels :: [String]
 getDefaultLabels = ["TODO", "FIXME", "XXX"]
 
@@ -125,14 +136,8 @@ colorRed input = "\x1b[31m" ++ input ++ "\x1b[0m"
 textWithBackground :: String -> String -> String
 textWithBackground color input = "\x1b[" ++ color ++ "m" ++ input ++ "\x1b[0m"
 
-textWithRedBackroundAndBorder :: String -> String
-textWithRedBackroundAndBorder input = textWithBackground "41;1;37" input
-
 colorBlue :: String -> String
 colorBlue input = "\x1b[34m" ++ input ++ "\x1b[0m"
-
-textWithBlueBackground :: String -> String
-textWithBlueBackground input = textWithBackground "44;1;37" input
 
 textWithRedBackground :: String -> String
 textWithRedBackground input = textWithBackground "41;1;37" (" " ++ input ++ " ")
@@ -147,9 +152,9 @@ spacesWithGreenBackground :: Int -> String
 spacesWithGreenBackground count = textWithBackground "42;1;37" (replicate count ' ')
 
 removeBeforeLabel :: String -> String -> String
-removeBeforeLabel input label = case dropWhile (not . isPrefixOf label) (tails input) of
+removeBeforeLabel input targetLabel = case dropWhile (not . isPrefixOf targetLabel) (tails input) of
     (rest:_) -> rest
     _ -> input
 
 removeBeforeLabels :: String -> [String] -> String
-removeBeforeLabels input labels = foldl (\acc label -> removeBeforeLabel acc label) input labels
+removeBeforeLabels = foldl removeBeforeLabel
