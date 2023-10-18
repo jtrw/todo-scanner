@@ -36,12 +36,12 @@ To use this tool, you need to have the following installed:
 ## Usage
 
 ```bash
-todo-scanner --dir DIRECTORY [--label LABEL] [--exts EXTENSION]
+todo-scanner [--dir DIRECTORY] [--label LABEL] [--exts EXTENSION]
 ```
 
 Parameters:
 
-1. `--dir DIRECTORY`: The directory to scan for files.
+1. `--dir DIRECTORY`: The directory to scan for files. (can be specified multiple times)
 1. `--label LABEL`: Optional. A label to search for (can be specified multiple times).
 1. `--exts EXTENSION`: Optional. File extensions to scan for (can be specified multiple times).
 
