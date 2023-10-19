@@ -89,6 +89,24 @@ If no matches are found, the program reports:
         Found 0 TODOs
 ```
 
+## Docker
+
+`docker run -v $(pwd):/code --rm -it --entrypoint "/srv/todo-scaner" jtrw/todo-sacenr --dir=/code`
+
+## Gitlab-Ci
+
+```yaml
+todo:
+  stage: static-analizator
+  image:
+    name: jtrw/todo-scaner:latest
+    entrypoint: [""] # disable entrypoint
+  script:
+    - /srv/todo-scaner --dir=./src
+```
+
+
+
 ## Notes
 
 * The program uses colored highlighting to make the output more readable. It may not work on all terminals.
