@@ -2,13 +2,10 @@ import Data.List
 import System.Directory
 import System.FilePath
 import Control.Monad
---import System.IO
---import System.Environment
 import System.Exit
 import Data.Char
 import Options.Applicative
 import Data.Bifunctor (second)
---import Data.Binary.Put (PutM(Put))
 
 data Options = Options
   {
