@@ -1,4 +1,4 @@
-FROM haskell:buster as backend
+FROM haskell:latest as backend
 
 WORKDIR /app
 
@@ -13,7 +13,9 @@ FROM alpine:latest
 
 RUN apk add libc6-compat gmp
 
-COPY --from=backend /app/dist-newstyle/build/x86_64-linux/ghc-9.6.3/todo-scaner-0.1.0.0/x/todo-scaner/build/todo-scaner/todo-scaner /srv/todo-scaner
+ENV GHC 9.8.1
+
+COPY --from=backend /app/dist-newstyle/build/x86_64-linux/ghc-${GHC}/todo-scaner-0.1.0.0/x/todo-scaner/build/todo-scaner/todo-scaner /srv/todo-scaner
 
 WORKDIR /srv
 
